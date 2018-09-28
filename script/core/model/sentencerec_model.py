@@ -97,7 +97,7 @@ class SentenceRecModel:
             saver.restore(sess, config.MODEL_DIC + '/sentencerec.ckpt')
 
             labels = [key for key in range(self.classes)]
-            target_names = ['ctime', 'ptime', 'basic', 'wexp', 'sexp', 'noinfo']  # 标签列表
+            target_names = ['0', '1']  # 标签列表
 
             total_test_pred_y = []
             total_test_y = []
