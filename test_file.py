@@ -10,6 +10,7 @@ import mongoColletcion
 from script.tool import __splitsentence, __bigfile
 import csv
 import jieba
+import pandas as pd
 
 # num = 1
 # client, db, collection = mongoColletcion.connection('graduate', 'news')
@@ -30,65 +31,18 @@ import jieba
 #
 #     num += 1
 
-# filenames = os.listdir(config.SR_DIC + '/data')
-# tagdata_filepaths = [config.SR_DIC + '/data/' + filename for filename in filenames]
-# with open('split_text.txt', 'a', encoding='UTF-8-sig') as wf1:
-#     for tagdata_filepath in tagdata_filepaths:
-#         if os.path.exists(tagdata_filepath):
-#             for line in __bigfile.get_lines(tagdata_filepath):
-#                 a = jieba.cut(line)
-#                 for i in a:
-#                     wf1.write(i + ' ')
-
-
-# array = [1, 2, 3, 6, 5, 4]
-# for i in range(len(array)):
-#     for j in range(i):
-#         if array[j] > array[j + 1]:
-#             array[j], array[j + 1] = array[j + 1], array[j]
-# print(array)
-#
-#
-# #coding=utf-8
-# # 本题为考试多行输入输出规范示例，无需提交，不计分。
-# import sys
-# if __name__ == "__main__":
-#     # 读取第一行的n
-#     n = int(sys.stdin.readline().strip())
-#     ans = 0
-#     for i in range(n):
-#         # 读取每一行
-#         line = sys.stdin.readline().strip()
-#         # 把每一行的数字分隔后转化成int列表
-#         values = list(map(int, line.split()))
-#         for v in values:
-#             ans += v
-#     print(ans)
-
-
-# a = 7
-# b = 5
-# c = a ^ b
-# print(c)
-
-#
-# import sys
-#
-# if __name__ == '__main__':
-#     # n = int(sys.stdin.readline().strip())
-#     line = sys.stdin.readline().strip()
-#     value = list(map(int, line.split()))
-#     list = [x+1 for x in range(value[0])]
-#
-#     for j in range(value[1]):
-#         qizhi = sys.stdin.readline().strip()
-#         test = []
-#         test.append(int(qizhi))
-#         list.remove(int(qizhi))
-#         test.extend(list)
-#         list = test
-#
-#     print(str(list).replace(',', '').lstrip("[").rstrip("]"))
+# # 分句code，训练句向量presentence
+# client, db, collection = mongoColletcion.connection('graduate', 'news')
+# # news = collection.find({}).limit(2000)
+# news = collection.find({}).limit(200)
+# flag = 0
+# splitsentencefile = 'sentence100' + '.csv'
+# with open(splitsentencefile, 'a', encoding='UTF-8-sig') as wf1:
+#     for data in news:
+#         data_list = __splitsentence.resume2sentences(data['content'])
+#         for i in data_list:
+#             print(i)
+#             wf1.write(i + '\n')
 
 
 # from gensim.models import Doc2Vec
@@ -142,23 +96,37 @@ TaggededDocument = gensim.models.doc2vec.TaggedDocument  # 输入输出内容都
 list_name = os.listdir(config.SR_DIC + "/doc")  # 用于训练模型的语料先进行预处理
 
 
-def get_trainset():
-    x_train = []  # 用来存放语料
-    index = 0  # 每一篇博客需要一个对应的编号
-    doc_dict = {}  # 由编号映射博客ID的字典
-    for name in list_name:
-        user_file = '/home/wayne/2017SMP/fenci2/testingcorpus/' + name
-        # 语料预处理
-        data = open(user_file).read()
-        data = data.replace('\n', '').replace('  ', ' ')
-        data = data.lower()
-        words = data.split(" ")
-        x_train.append(TaggededDocument(words, tags=[index]))
-        doc_dict[index] = name.strip(".txt")
-        print('append ok!')
+def getText():
+    sentence = open('sentence100.csv', encoding='utf-8-sig')
+    df_train = list(csv.reader(sentence))
+    return df_train
 
-        index += 1
-    return x_train, doc_dict  # doc_dict的key和value 分别为编号和对应博客ID
+
+def cut_sentence(text):
+    stop_list = [line[:-1] for line in open(config.ST_DIC + '/停用词整合.txt', encoding='utf-8-sig')]
+    result = []
+    for each in text:
+        each_cut = jieba.cut(each[0])
+        each_split = ' '.join(each_cut).split()
+        # each_result = []
+        # for word in each_cut:
+        #     if word not in stop_list:
+        #         each_result.append(word)
+        each_result = [word for word in each_split if word not in stop_list]
+        result.append(' '.join(each_result))
+    return result
+
+
+def get_trainset(cut_sentence):
+    TaggededDocument = gensim.models.doc2vec.TaggedDocument
+    x_train = []
+    for i, text in enumerate(cut_sentence):
+        word_list = text.split(' ')
+        l = len(word_list)
+        word_list[l - 1] = word_list[l - 1].strip()
+        document = TaggededDocument(word_list, tags=[i])
+        x_train.append(document)
+    return x_train
 
 
 def train(x_train, size=500, epoch_num=1):
@@ -168,3 +136,8 @@ def train(x_train, size=500, epoch_num=1):
     model_dm.train(x_train, total_examples=model_dm.corpus_count, epochs=70)  # corpus_count是文件个数  epochs 训练次数
     model_dm.save(config.MODEL_DIC + 'doc2vec.model')  # 保存模型训练结果，释放内存空间，后续可用load加载
     return model_dm
+
+
+if __name__ == '__main__':
+    get_trainset(cut_sentence(getText()))
+

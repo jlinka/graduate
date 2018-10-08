@@ -28,6 +28,7 @@ TMP_WR_DIC = TAG_DIC + '/tmp/wr'  # 未处理的命名实体词识别模型标�
 SR_DIC = TAG_DIC + '/sr'  # 处理的特征句分类模型标注数据
 WR_DIC = TAG_DIC + '/wr'  # 处理的命名实体词识别模型标注数据
 
+ST_DIC = PROJECT_ROOT + '/file/static'   #固定文件路径 例如：停用词表
 ###############################################
 
 # 模型配置
